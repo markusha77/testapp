@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Terminal, Cpu, Wifi } from 'lucide-react';
+import { Terminal, Cpu, Wifi, BarChart3, Eye, EyeOff } from 'lucide-react';
 import { useTodos } from './hooks/useTodos';
 import TodoInput from './components/TodoInput';
 import TodoItem from './components/TodoItem';
 import TodoStats from './components/TodoStats';
 import TodoFilters from './components/TodoFilters';
+import ProductivityInsights from './components/ProductivityInsights';
 
 function App() {
   const { todos, addTodo, toggleTodo, deleteTodo, updateTodo, clearCompleted, stats } = useTodos();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [showInsights, setShowInsights] = useState(false);
 
   const filteredTodos = useMemo(() => {
     switch (filter) {
@@ -44,7 +46,7 @@ function App() {
       {/* Background Effects */}
       <div className="fixed inset-0 hologram-effect opacity-30 pointer-events-none"></div>
       
-      <div className="relative z-10 container mx-auto px-4 py-8 max-w-4xl">
+      <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <header className="text-center mb-12">
           <div className="relative inline-block">
@@ -72,8 +74,22 @@ function App() {
               <Wifi className="w-4 h-4 animate-pulse" />
               <span>NEURAL LINK ACTIVE</span>
             </div>
+            <button
+              onClick={() => setShowInsights(!showInsights)}
+              className="flex items-center gap-2 text-neon-yellow text-sm font-cyber hover:text-neon-pink transition-colors duration-300"
+            >
+              {showInsights ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <span>{showInsights ? 'HIDE' : 'SHOW'} ANALYTICS</span>
+            </button>
           </div>
         </header>
+
+        {/* Analytics Panel */}
+        {showInsights && (
+          <div className="mb-8">
+            <ProductivityInsights todos={todos} />
+          </div>
+        )}
 
         {/* Stats Dashboard */}
         <div className="mb-8">

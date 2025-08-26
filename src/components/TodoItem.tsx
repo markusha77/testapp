@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Check, X, Edit3, Save, AlertTriangle, Zap, Clock, Target } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, X, Edit3, Save, AlertTriangle, Zap, Clock, Target, Timer } from 'lucide-react';
 import { Todo } from '../types/todo';
 
 interface TodoItemProps {
@@ -13,6 +13,28 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggle, onDelete, onUpdate 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(todo.text);
   const [editPriority, setEditPriority] = useState(todo.priority);
+  const [timeElapsed, setTimeElapsed] = useState('');
+
+  // Calculate time elapsed since creation
+  useEffect(() => {
+    const updateTimeElapsed = () => {
+      const now = new Date();
+      const diff = now.getTime() - todo.createdAt.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        setTimeElapsed(`${hours}h ${minutes}m`);
+      } else {
+        setTimeElapsed(`${minutes}m`);
+      }
+    };
+
+    updateTimeElapsed();
+    const interval = setInterval(updateTimeElapsed, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [todo.createdAt]);
 
   const handleSave = () => {
     if (editText.trim()) {
@@ -28,14 +50,19 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggle, onDelete, onUpdate 
   };
 
   const priorityConfig = {
-    low: { color: 'neon-green', icon: Clock, label: 'LOW' },
-    medium: { color: 'neon-cyan', icon: Target, label: 'MED' },
-    high: { color: 'neon-yellow', icon: Zap, label: 'HIGH' },
-    critical: { color: 'neon-pink', icon: AlertTriangle, label: 'CRIT' },
+    low: { color: 'neon-green', icon: Clock, label: 'LOW', urgency: 1 },
+    medium: { color: 'neon-cyan', icon: Target, label: 'MED', urgency: 2 },
+    high: { color: 'neon-yellow', icon: Zap, label: 'HIGH', urgency: 3 },
+    critical: { color: 'neon-pink', icon: AlertTriangle, label: 'CRIT', urgency: 4 },
   };
 
   const config = priorityConfig[todo.priority];
   const PriorityIcon = config.icon;
+
+  // Calculate completion time if completed
+  const completionTime = todo.completedAt && todo.createdAt 
+    ? Math.round((todo.completedAt.getTime() - todo.createdAt.getTime()) / (1000 * 60))
+    : null;
 
   return (
     <div className={`group relative transition-all duration-300 ${todo.completed ? 'opacity-60' : ''}`}>
@@ -60,10 +87,21 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggle, onDelete, onUpdate 
             {todo.completed && <Check className="w-4 h-4 text-cyber-dark" />}
           </button>
 
-          {/* Priority Indicator */}
+          {/* Priority Indicator with Urgency Animation */}
           <div className={`flex-shrink-0 flex items-center gap-2 text-${config.color} font-cyber text-xs`}>
-            <PriorityIcon className="w-4 h-4" />
+            <PriorityIcon className={`w-4 h-4 ${config.urgency >= 3 && !todo.completed ? 'animate-pulse' : ''}`} />
             <span>{config.label}</span>
+            {config.urgency === 4 && !todo.completed && (
+              <div className="flex gap-1">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1 h-1 rounded-full bg-${config.color} animate-pulse`}
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  ></div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Todo Content */}
@@ -93,13 +131,37 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggle, onDelete, onUpdate 
                 </select>
               </div>
             ) : (
-              <p className={`font-exo transition-all duration-300 ${
-                todo.completed 
-                  ? 'line-through text-gray-400' 
-                  : 'text-white'
-              }`}>
-                {todo.text}
-              </p>
+              <div>
+                <p className={`font-exo transition-all duration-300 ${
+                  todo.completed 
+                    ? 'line-through text-gray-400' 
+                    : 'text-white'
+                }`}>
+                  {todo.text}
+                </p>
+                
+                {/* Progress Indicators */}
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1 text-xs text-gray-500 font-cyber">
+                    <Timer className="w-3 h-3" />
+                    <span>{timeElapsed} ago</span>
+                  </div>
+                  
+                  {todo.completed && completionTime && (
+                    <div className="flex items-center gap-1 text-xs text-neon-green font-cyber">
+                      <Check className="w-3 h-3" />
+                      <span>Completed in {completionTime}m</span>
+                    </div>
+                  )}
+                  
+                  {!todo.completed && config.urgency >= 3 && (
+                    <div className={`flex items-center gap-1 text-xs text-${config.color} font-cyber animate-pulse`}>
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>URGENT</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
